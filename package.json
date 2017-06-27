@@ -1,0 +1,17 @@
+{
+  "name": "hypercache",
+  "version": "0.0.1-pre",
+  "description": "Simple but powerful caching.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "db",
+    "caching",
+    "sync",
+    "fast"
+  ],
+  "author": "Maciej Krüger <mkg20001@gmail.com>",
+  "license": "GPL-3.0"
+}
