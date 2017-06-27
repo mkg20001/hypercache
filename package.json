@@ -6,7 +6,8 @@
   "scripts": {
     "test": "nyc mocha",
     "watch": "nodemon -x npm test",
-    "cov": "nyc --reporter=lcov mocha"
+    "cov": "nyc --reporter=lcov mocha",
+    "report-coverage": "nyc report --reporter=lcov > coverage.lcov && codecov"
   },
   "keywords": [
     "db",

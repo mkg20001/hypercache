@@ -6,4 +6,4 @@ dist:           trusty
 before_install:
   - pip install --user codecov    #Install codecov
 after_success:
-  - codecov                       #Run codecov
+  - npm run report-coverage       #Run codecov
