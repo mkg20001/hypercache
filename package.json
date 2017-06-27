@@ -1,6 +1,6 @@
 {
   "name": "hypercache",
-  "version": "0.0.1-pre",
+  "version": "0.0.1",
   "description": "Simple but powerful caching.",
   "main": "index.js",
   "scripts": {
@@ -28,5 +28,16 @@
     "sinon": "^2.3.5",
     "sinon-chai": "^2.11.0"
   },
-  "dependencies": {}
+  "dependencies": {},
+  "directories": {
+    "test": "test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mkg20001/hypercache.git"
+  },
+  "bugs": {
+    "url": "https://github.com/mkg20001/hypercache/issues"
+  },
+  "homepage": "https://github.com/mkg20001/hypercache#readme"
 }
