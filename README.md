@@ -4,6 +4,12 @@ Simple but powerful caching.
 
 Hypercache caches async db operations and gives you the abbility to get things by id or search the database completly sync and with speeds otherwise impossible.
 
+# Why hypercache?
+
+ - ## Fast
+ - ## Zero-Dependencies
+ - ## 100% Test Coverage
+
 # Usage
 
 `new Hypercache(fnc, options)`
