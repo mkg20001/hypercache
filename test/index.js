@@ -6,6 +6,8 @@ var mongoose = new Mongoose()
 var Mockgoose = require('mockgoose').Mockgoose
 var mockgoose = new Mockgoose(mongoose)
 
+mongoose.Promise = Promise
+
 global.mongoose = mongoose;
 ["User"].forEach(i => {
   global[i] = require("./models/" + i)
@@ -17,7 +19,7 @@ require("colors")
 function log(_) {
   const a = [].slice.call(arguments, 0)
   a[0] = (" => " + _).grey
-  console.log.apply(console, a)
+  if (process.env.DEBUG) console.log.apply(console, a)
 }
 
 function add(data, fnc, cb) {
@@ -26,12 +28,32 @@ function add(data, fnc, cb) {
   else cb()
 }
 
-const hypercache = require("..")
-
 const sinon = require("sinon")
 const chai = require("chai")
 chai.use(require("sinon-chai"))
 chai.should()
+const expect = chai.expect
+const assert = require("assert")
+
+const hypercache = require("..")
+
+function createHypercache(conf, opt, cb) {
+  log("Cleanup db...")
+  mockgoose.helper.reset().then(() => {
+    log("Generating testdata...")
+    let data = global.genUser(conf.items || 10)
+    let cache
+    log("Inserting %s user entrys to db...", data.length)
+    add(data.slice(0), (data, cb) => new global.User(data).save(cb), err => {
+      if (err) return cb(err)
+      log("Creating hypercache...")
+      cache = new hypercache(cb => global.User.find({}, cb), opt)
+      cache.testdata = data
+      cache.on("error", cb)
+      cache.on("ready", () => cb(null, cache))
+    })
+  })
+}
 
 describe("hypercache", () => {
   before(function (cb) {
@@ -45,24 +67,51 @@ describe("hypercache", () => {
     })
   })
 
-  describe("mongoose", () => {
+  describe("method", () => {
     let cache
-    let data
     before(cb => {
-      log("Generating testdata...")
-      data = global.genUser(100)
-      log("Inserting %s user entrys to db...", data.length)
-      add(data.slice(0), (data, cb) => new global.User(data).save(cb), err => {
+      createHypercache({
+        items: 100
+      }, {
+        interval: 1000,
+        keys: ["id", "name"]
+      }, (err, _cache) => {
         if (err) return cb(err)
-        log("Creating hypercache...")
-        cache = new hypercache(cb => global.User.find({}, cb), {
-          interval: 1000
-        })
-        cache.on("error", cb)
-        cache.on("ready", cb)
+        else {
+          cache = _cache
+          return cb()
+        }
       })
     })
 
-    it("should return an array with 100 items", () => cache.getAll().should.have.lengthOf(100))
+    describe("getAll", () => {
+      it("should return an array with 100 items", () => cache.getAll().should.have.lengthOf(100))
+    })
+
+    describe("getMap", () => {
+      it("should return a map for id with 100 items", () => {
+        const map = cache.getMap("id")
+        assert(map, "no map returned")
+        Object.keys(map).should.have.lengthOf(100)
+      })
+
+      it("should throw for invalid map", () => {
+        expect(cache.getMap).to.throw(/HyperError\(index=".*"\): undefined is not a valid key/)
+      })
+    })
+
+    describe("getBy", () => {
+      it("should find the first object with the first id", () => {
+        const l = cache.testdata[0] //what we are looking for
+        const o = cache.getBy("id", l.id) //what we got
+        assert(o, "no object found")
+        assert.equal(typeof o, "object", "wrong type")
+        o.id.should.equal(l.id)
+      })
+
+      it("should return nothing for missing id", () => {
+        assert.ok(typeof cache.getBy() == "undefined", "did not return undefined")
+      })
+    })
   })
 })

@@ -5,7 +5,7 @@ const log = debug('hypercache')
 
 function getfncName(code) {
   const fncname = code.match(/function *([a-z0-9_-]+)\(.*\)/mi)
-  const arrowargs = code.match(/\(([a-z0-9_, -]+)\)/mi)
+  const arrowargs = code.match(/[\(]{0,1}([a-z0-9_, -]+)[\)]{0,1} *=>/mi)
 
   return [fncname, arrowargs]
     .filter(e => !!e)
@@ -64,7 +64,7 @@ function HyperCache(fnc, opt) {
     fnc((err, res) => {
       if (err) self.emit("error", err)
       if (err && cb) return cb(err)
-      else if (err) self.emit("error",err)
+      else if (err) self.emit("error", err)
       cache = res
       refresh()
       if (cb) cb()
@@ -91,7 +91,7 @@ function HyperCache(fnc, opt) {
   }
 
   if (opt.manual) {
-    this.update=update
+    this.update = update
   }
 
   this.getAll = getAll

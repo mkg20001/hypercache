@@ -4,7 +4,9 @@
   "description": "Simple but powerful caching.",
   "main": "index.js",
   "scripts": {
-    "test": "mocha"
+    "test": "nyc mocha",
+    "watch": "nodemon -x npm test",
+    "cov": "nyc --reporter=lcov mocha"
   },
   "keywords": [
     "db",
@@ -22,6 +24,7 @@
     "mockgoose": "github:Mockgoose/Mockgoose",
     "mongodb-prebuilt": "github:mkg20001/mongodb-prebuilt#quickfix-1",
     "mongoose": "^4.11.0",
+    "nyc": "^11.0.3",
     "sinon": "^2.3.5",
     "sinon-chai": "^2.11.0"
   },
