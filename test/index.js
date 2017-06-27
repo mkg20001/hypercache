@@ -6,13 +6,19 @@ var mongoose = new Mongoose()
 var Mockgoose = require('mockgoose').Mockgoose
 var mockgoose = new Mockgoose(mongoose)
 
-//mockgoose.helper.setDbVersion('3.2.1')
-
 global.mongoose = mongoose;
 ["User"].forEach(i => {
   global[i] = require("./models/" + i)
   global["gen" + i] = require("./generators/" + i)
 })
+
+require("colors")
+
+function log(_) {
+  const a = [].slice.call(arguments, 0)
+  a[0] = (" => " + _).grey
+  console.log.apply(console, a)
+}
 
 function add(data, fnc, cb) {
   const i = data.shift()
@@ -25,13 +31,14 @@ const hypercache = require("..")
 const sinon = require("sinon")
 const chai = require("chai")
 chai.use(require("sinon-chai"))
+chai.should()
 
 describe("hypercache", () => {
   before(function (cb) {
     this.timeout(100 * 1000)
-    console.log("Preparing storage...")
+    log("Preparing storage...")
     mockgoose.prepareStorage().then(function () {
-      console.log("Connecting...")
+      log("Connecting...")
       mongoose.connect('mongodb://example.com/TestingDB', function (err) {
         cb(err)
       })
@@ -42,12 +49,12 @@ describe("hypercache", () => {
     let cache
     let data
     before(cb => {
-      console.log("Generating testdata...")
+      log("Generating testdata...")
       data = global.genUser(100)
-      console.log("Inserting %s user entrys to db...", data.length)
+      log("Inserting %s user entrys to db...", data.length)
       add(data.slice(0), (data, cb) => new global.User(data).save(cb), err => {
         if (err) return cb(err)
-        console.log("Creating hypercache...")
+        log("Creating hypercache...")
         cache = new hypercache(cb => global.User.find({}, cb), {
           interval: 1000
         })
@@ -56,6 +63,6 @@ describe("hypercache", () => {
       })
     })
 
-    it("should return an array with 100 items", () => require("assert")(cache.getAll().length, 100))
+    it("should return an array with 100 items", () => cache.getAll().should.have.lengthOf(100))
   })
 })

@@ -16,6 +16,7 @@
   "license": "GPL-3.0",
   "devDependencies": {
     "chai": "^4.0.2",
+    "colors": "^1.1.2",
     "gene-rator": "0.0.1-pre",
     "mocha": "^3.4.2",
     "mockgoose": "github:Mockgoose/Mockgoose",
