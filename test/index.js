@@ -187,6 +187,63 @@ describe("hypercache", () => {
 
       it("should throw if input is not array", () => expect(cache.update).to.throw(err("Input is not an array")))
     })
+  })
 
+  describe("empty values", () => {
+    it("should not throw if opt is empty", cb => createHypercache({}, null, cb))
+    it("should not throw if opt.keys is empty", cb => createHypercache({}, {
+      keys: null
+    }, cb))
+    it("should assume name unnamed if function is undefined", () => {
+      const cache = new hypercache(null, {
+        manual: true
+      })
+      expect(cache.getAll).to.throw('HyperError(index="unnamed"): Index not ready') //name is not public, so only errors contain it
+    })
+    it("should assume name index1 if name is given", () => {
+      const cache = new hypercache(null, {
+        manual: true,
+        name: "index1"
+      })
+      expect(cache.getAll).to.throw('HyperError(index="index1"): Index not ready') //name is not public, so only errors contain it
+    })
+  })
+
+  describe("events", () => {
+    let cache
+    before(cb => {
+      createHypercache({
+        items: 25
+      }, {
+        manual: true
+      }, (err, _cache) => {
+        if (err) return cb(err)
+        cache = _cache
+        return cb()
+      })
+    })
+
+    it("should emit ready", cb => {
+      cache.once("ready", cb)
+      cache.update(cache.testdata)
+    })
+
+    it("should not emit ready again", cb => {
+      cache.once("ready", () => cb(new Error("but it did")))
+      cache.once("update", cb)
+      cache.update(cache.testdata)
+    })
+
+    it("should emit update", cb => {
+      cache.once("update", cb)
+      cache.update(cache.testdata)
+    })
+
+    it("should emit error if cb returns error", cb => {
+      const cache = new hypercache(cb => cb(new Error("Test")), {
+        interval: 1000
+      })
+      cache.once("error", e => cb(!e ? new Error("empty error") : null))
+    })
   })
 })

@@ -63,20 +63,19 @@ function HyperCache(fnc, opt) {
     self.emit("update")
   }
 
-  function load(cb) {
+  function load() {
     fnc((err, res) => {
       if (err) self.emit("error", err)
-      if (err && cb) return cb(err)
-      else if (err) self.emit("error", err)
+      //if (err && cb) return cb(err)
       cache = res
       refresh()
-      if (cb) cb()
+      //if (cb) cb()
     })
   }
 
   if (!opt.manual) {
     setInterval(load, opt.interval || 2500)
-    load()
+    process.nextTick(load) //fix for events
   }
 
   function update(data) {
