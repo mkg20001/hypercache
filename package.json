@@ -4,7 +4,7 @@
   "description": "Simple but powerful caching.",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "mocha"
   },
   "keywords": [
     "db",
@@ -13,5 +13,16 @@
     "fast"
   ],
   "author": "Maciej Krüger <mkg20001@gmail.com>",
-  "license": "GPL-3.0"
+  "license": "GPL-3.0",
+  "devDependencies": {
+    "chai": "^4.0.2",
+    "gene-rator": "0.0.1-pre",
+    "mocha": "^3.4.2",
+    "mockgoose": "github:Mockgoose/Mockgoose",
+    "mongodb-prebuilt": "github:mkg20001/mongodb-prebuilt#quickfix-1",
+    "mongoose": "^4.11.0",
+    "sinon": "^2.3.5",
+    "sinon-chai": "^2.11.0"
+  },
+  "dependencies": {}
 }
