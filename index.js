@@ -2,12 +2,15 @@
 
 const debug = require('debug')
 const log = debug('hypercache')
+const util = require("util")
 
-function getfncName(code) {
+function getfncName(fnc) {
+  const code = fnc.toString()
+  const name = util.inspect(fnc).match(/\[Function: ([a-z0-9_-]+)\]/mi)
   const fncname = code.match(/function *([a-z0-9_-]+)\(.*\)/mi)
   const arrowargs = code.match(/[\(]{0,1}([a-z0-9_, -]+)[\)]{0,1} *=>/mi)
 
-  return [fncname, arrowargs]
+  return [name, fncname, arrowargs]
     .filter(e => !!e)
     .map(e => e[1].replace(/^"/g, "").replace(/"$/g, ""))[0]
 }
@@ -25,7 +28,7 @@ function HyperCache(fnc, opt) {
   let m = {}
 
   let name = opt.name
-  if (!name) name = fnc && getfncName(fnc.toString()) ? getfncName(fnc.toString()) : "unnamed"
+  if (!name) name = fnc && getfncName(fnc) ? getfncName(fnc) : "unnamed"
   let qname = JSON.stringify(name)
 
   function getBy(id, idv) {
@@ -66,16 +69,9 @@ function HyperCache(fnc, opt) {
   function load() {
     fnc((err, res) => {
       if (err) self.emit("error", err)
-      //if (err && cb) return cb(err)
       cache = res
       refresh()
-      //if (cb) cb()
     })
-  }
-
-  if (!opt.manual) {
-    setInterval(load, opt.interval || 2500)
-    process.nextTick(load) //fix for events
   }
 
   function update(data) {
@@ -97,6 +93,9 @@ function HyperCache(fnc, opt) {
 
   if (opt.manual) {
     this.update = update
+  } else {
+    setInterval(load, opt.interval || 2500)
+    process.nextTick(load) //fix for events
   }
 
   this.getAll = getAll
