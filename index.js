@@ -31,20 +31,24 @@ function HyperCache(fnc, opt) {
   if (!name) name = fnc && getfncName(fnc) ? getfncName(fnc) : "unnamed"
   let qname = JSON.stringify(name)
 
+  function err(msg) {
+    return new Error("HyperError(index=" + qname + "): " + msg)
+  }
+
   function getBy(id, idv) {
     if (!idv) {
       idv = id
       id = opt.keys[0]
     }
-    if (typeof id != "string") throw new Error("HyperError(index=" + qname + "): " + id + " is not of type string")
-    if (opt.keys.indexOf(id) == -1) throw new Error("HyperError(index=" + qname + "): " + id + " is not a valid key")
-    if (!m[id] || !ready) throw new Error("HyperError(index=" + qname + "): Index not ready")
+    if (typeof id != "string") throw err(id + " is not of type string")
+    if (opt.keys.indexOf(id) == -1) throw err(id + " is not a valid key")
+    if (!m[id] || !ready) throw err("Index not ready")
     return m[id][idv]
   }
 
   function getMap(id) {
-    if (opt.keys.indexOf(id) == -1) throw new Error("HyperError(index=" + qname + "): " + id + " is not a valid key")
-    if (!ready) throw new Error("HyperError(index=" + qname + "): Index not ready")
+    if (opt.keys.indexOf(id) == -1) throw err(id + " is not a valid key")
+    if (!ready) throw err("Index not ready")
     return Object.assign(m[id])
   }
 
@@ -75,19 +79,19 @@ function HyperCache(fnc, opt) {
   }
 
   function update(data) {
-    if (!Array.isArray(data)) throw new Error("HyperError(index=" + qname + "): Input is not an array")
+    if (!Array.isArray(data)) throw err("Input is not an array")
     cache = data
     refresh()
     self.emit("update")
   }
 
   function search(val) {
-    if (!ready) throw new Error("HyperError(index=" + qname + "): Index not ready")
+    if (!ready) throw err("Index not ready")
     return opt.keys.map(map => getBy(map, val)).filter(e => !!e)
   }
 
   function getAll() {
-    if (!ready) throw new Error("HyperError(index=" + qname + "): Index not ready")
+    if (!ready) throw err("Index not ready")
     return cache.slice(0)
   }
 
