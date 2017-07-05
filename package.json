@@ -24,9 +24,9 @@
     "mocha": "^3.4.2",
     "mockgoose": "github:Mockgoose/Mockgoose",
     "mongodb-prebuilt": "github:mkg20001/mongodb-prebuilt#quickfix-1",
-    "mongoose": "^4.11.0",
+    "mongoose": "^4.11.1",
     "nyc": "^11.0.3",
-    "sinon": "^2.3.5",
+    "sinon": "^2.3.6",
     "sinon-chai": "^2.11.0"
   },
   "dependencies": {},
