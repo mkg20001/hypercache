@@ -223,7 +223,7 @@ describe("hypercache", () => {
     })
   })
 
-  describe("sync", () => {
+  describe("sync method", () => {
     let cache
     let pcache
     before(cb => {
@@ -265,9 +265,25 @@ describe("hypercache", () => {
 
     it("should call the child update with the parent cache once")
 
-    it("should emit any errors of the parent")
-
     it("should catch up if a call gets skipped")
+
+    it("should emit error if cb returns error", cb => {
+      const cache = new hypercache((t, cb) => cb(new Error("Test")), {
+        sync: new hypercache(cb => cb(null, []), {
+          interval: 10
+        })
+      })
+      cache.once("error", e => cb(!e ? new Error("empty error") : null))
+    })
+
+    it("should re-emit any errors of the parent", cb => {
+      const pcache = new hypercache(cb => cb(new Error("Test")))
+      pcache.once("error", () => {})
+      const cache = new hypercache(() => {}, {
+        sync: pcache
+      })
+      cache.once("error", e => cb(!e ? new Error("empty error") : null))
+    })
 
     it("should throw if both manual and sync are used", () => {
       expect(() => new hypercache(null, {

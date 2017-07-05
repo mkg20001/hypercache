@@ -131,7 +131,7 @@ function HyperCache(fnc, opt) {
     this.update = update
   } else if (opt.sync) {
     if (!(opt.sync instanceof HyperCache)) throw err("opt.sync is not a hypercache")
-    opt.sync.on("error", e => self.emit.error(e))
+    opt.sync.on("error", e => self.emit("error", e))
     opt.sync.on("update", syncLoad)
   } else {
     setInterval(load, opt.interval || 2500)
