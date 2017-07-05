@@ -258,30 +258,53 @@ describe("hypercache", () => {
       cache.on("ready", cb)
     })
 
+    it("should call the child update with the parent cache once", cb => {
+      const spy = sinon.spy()
+      const data = global.genUser(10)
+      const pcache = new hypercache(cb => cb(null, data), {
+        timeout: 10
+      })
+      const cache = new hypercache(spy, {
+        sync: pcache
+      })
+      pcache.on("update", () => {
+        process.nextTick(() => {
+          assert.deepEqual(data, spy.getCall(0).args[0])
+          spy.getCall(0).args[1](null, [])
+          cb()
+        })
+      })
+    })
+
     it("should return 20 items for parent and 10 for child", () => {
       expect(pcache.getAll()).to.have.lengthOf(20)
       expect(cache.getAll()).to.have.lengthOf(10)
     })
 
-    it("should call the child update with the parent cache once")
-
     it("should catch up if a call gets skipped")
 
-    it("should emit error if cb returns error", cb => {
+    it("should emit error if cb returns error", _cb => {
       const cache = new hypercache((t, cb) => cb(new Error("Test")), {
-        sync: new hypercache(cb => cb(null, []), {
-          interval: 10
-        })
+        sync: new hypercache(cb => cb(null, []))
       })
+      let cb = e => {
+        cache.destroy()
+        _cb(e)
+      }
       cache.once("error", e => cb(!e ? new Error("empty error") : null))
     })
 
-    it("should re-emit any errors of the parent", cb => {
+    it("should re-emit any errors of the parent", _cb => {
       const pcache = new hypercache(cb => cb(new Error("Test")))
       pcache.once("error", () => {})
       const cache = new hypercache(() => {}, {
         sync: pcache
       })
+      let cb = e => {
+        pcache.destroy()
+        cache.destroy()
+        _cb(e)
+      }
       cache.once("error", e => cb(!e ? new Error("empty error") : null))
     })
 

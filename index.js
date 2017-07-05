@@ -37,6 +37,7 @@ function HyperCache(fnc, opt) {
     return new Error("HyperError(index=" + qname + "): " + msg)
   }
 
+  let intv = 0
   let callLock = false
   let callTimeout = opt.timeout || opt.interval + 1000 || 3500
 
@@ -48,9 +49,10 @@ function HyperCache(fnc, opt) {
       if (cbFired) throw err("Callback called twice")
       cbFired = true
       callLock = false
+      clearTimeout(tm)
       rcb(_err, res)
     }
-    setTimeout(() => {
+    const tm = setTimeout(() => {
       if (!cbFired) cb(err("Timeout"))
     }, callTimeout)
     callLock = true
@@ -75,7 +77,7 @@ function HyperCache(fnc, opt) {
   }
 
   function refresh() {
-    log("Refreshing index for hypercache -", name)
+    log("refreshing index for hypercache", name)
     opt.keys.forEach(map => {
       m[map] = {}
       cache.forEach(e => {
@@ -125,6 +127,13 @@ function HyperCache(fnc, opt) {
     return cache.slice(0)
   }
 
+  function destroy() {
+    if (intv) clearInterval(intv)
+    self.emit("destroy")
+    ready = false
+    cache = []
+  }
+
   if (opt.sync && opt.manual) {
     throw err("Currently manual+sync is not supported")
   } else if (opt.manual) {
@@ -134,7 +143,7 @@ function HyperCache(fnc, opt) {
     opt.sync.on("error", e => self.emit("error", e))
     opt.sync.on("update", syncLoad)
   } else {
-    setInterval(load, opt.interval || 2500)
+    intv = setInterval(load, opt.interval || 2500)
     process.nextTick(load) //fix for events
   }
 
@@ -142,6 +151,7 @@ function HyperCache(fnc, opt) {
   this.getMap = getMap
   this.getBy = getBy
   this.search = search
+  this.destroy = destroy
 }
 
 require("util").inherits(HyperCache,
