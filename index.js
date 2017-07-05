@@ -44,11 +44,11 @@ function HyperCache(fnc, opt) {
     if (callLock) return
     let cbFired = false
     const rcb = b ? b : a
-    let cb = (err, res) => {
+    let cb = (_err, res) => {
       if (cbFired) throw err("Callback called twice")
       cbFired = true
       callLock = false
-      rcb(err, res)
+      rcb(_err, res)
     }
     setTimeout(() => {
       if (!cbFired) cb(err("Timeout"))

@@ -135,7 +135,37 @@ describe("hypercache", () => {
   })
 
   describe("race condition", () => {
-    it("should not call fnc twice if it already is running")
+    it("should not call fnc twice if it already is running", cb => {
+      const spy = sinon.spy()
+      const cache = new hypercache(spy, {
+        interval: 1
+      })
+      setTimeout(() => {
+        assert(spy.calledOnce)
+        cb()
+      }, 20)
+    })
+
+    it("should emit an error if cb times out", cb => {
+      const cache = new hypercache(() => {}, {
+        timeout: 10
+      })
+      cache.on("error", e => {
+        expect(() => {
+          throw e
+        }).to.throw(err("Timeout"))
+        cb()
+      })
+    })
+
+    it("should emit an error if cb is called twice", _cb => {
+      const cache = new hypercache(cb => {
+        cb(null, [])
+        expect(cb).to.throw(err("Callback called twice"))
+        _cb()
+      }, {})
+      cache.on("error", _cb)
+    })
   })
 
   describe("manual method", () => {
@@ -207,7 +237,8 @@ describe("hypercache", () => {
         else {
           pcache = _cache
           cache = new hypercache((users, cb) => {
-            return cb(null, users.map(u => {
+            let f = false
+            return cb(null, users.filter(u => f = !f).map(u => {
               return {
                 name: u.name,
                 since: 0
@@ -217,6 +248,7 @@ describe("hypercache", () => {
             keys: ["name", "since"],
             sync: pcache
           })
+          cb()
         }
       })
     })
@@ -226,7 +258,16 @@ describe("hypercache", () => {
       cache.on("ready", cb)
     })
 
+    it("should return 20 items for parent and 10 for child", () => {
+      expect(pcache.getAll()).to.have.lengthOf(20)
+      expect(cache.getAll()).to.have.lengthOf(10)
+    })
+
     it("should call the child update with the parent cache once")
+
+    it("should emit any errors of the parent")
+
+    it("should catch up if a call gets skipped")
 
     it("should throw if both manual and sync are used", () => {
       expect(() => new hypercache(null, {
