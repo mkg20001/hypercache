@@ -36,7 +36,6 @@ function HyperCache(fnc, opt) {
 
   let name = opt.name
   if (!name || !name.trim()) name = fnc && getfncName(fnc) ? getfncName(fnc) : "unnamed"
-  if (!name.trim()) name = "unnamed"
   name = name.trim().replace(/ /g, "_")
   let qname = JSON.stringify(name)
 
@@ -120,7 +119,7 @@ function HyperCache(fnc, opt) {
       if (err) self.emit("error", err)
       cache = res
       refresh()
-      if (syncSkip) console.error("Hypercache %s: Skipped %s sync itterations", qname, syncSkip)
+      if (syncSkip) console.error("Hypercache %s: Skipped %s sync itteration(s)", qname, syncSkip)
       if (syncQueue) {
         const q = syncQueue
         syncQueue = null

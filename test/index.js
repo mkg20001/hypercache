@@ -177,6 +177,7 @@ describe("hypercache", () => {
       })
       setTimeout(() => {
         assert(spy.calledOnce)
+        clean(cache)
         cb()
       }, 20)
     })
@@ -338,6 +339,34 @@ describe("hypercache", () => {
           cb()
         }, 15)
       })
+    })
+
+    it("should warn if skipped", _cb => {
+      const spy = sinon.spy(console, "error")
+      const data = global.genUser(10)
+      const pcache = new hypercache(cb => cb(null, data), {
+        timeout: 8,
+        interval: 10
+      })
+      let first = true
+      const cache = new hypercache((data, cb) => {
+        if (first) {
+          setTimeout(cb, 25, null, data)
+          first = false
+        } else {
+          assert(spy.calledOnce)
+          assert.deepEqual(spy.getCall(0).args, {
+            0: "Hypercache %s: Skipped %s sync itteration(s)",
+            1: '"test:should_warn_if_skipped"',
+            2: 1
+          })
+          console.error.restore()
+          _cb()
+        }
+      }, {
+        sync: pcache
+      })
+      clean(pcache, cache)
     })
 
     it("should emit error if cb returns error", cb => {
