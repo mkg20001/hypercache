@@ -39,7 +39,26 @@ chai.should()
 const expect = chai.expect
 const assert = require("assert")
 
-const hypercache = require("..")
+const _hypercache = require("..")
+
+const hypercache = function (fnc, opt) {
+  if (!nameMock) return new _hypercache(fnc, opt)
+  else {
+    if (!opt) opt = {}
+    if (!opt.name) opt.name = "test:" + curTest
+    return new _hypercache(fnc, opt)
+  }
+}
+
+let cleanUp
+var curTest = "---"
+let nameMock = true
+
+const clean = h => {
+  if (!cleanUp)
+    cleanUp = []
+  cleanUp.push(h)
+}
 
 function createHypercache(conf, opt, cb) {
   log("Cleanup db...")
@@ -51,7 +70,13 @@ function createHypercache(conf, opt, cb) {
     add(data.slice(0), (data, cb) => new global.User(data).save(cb), err => {
       if (err) return cb(err)
       log("Creating hypercache...")
-      cache = new hypercache(cb => global.User.find({}, cb), opt)
+      if (nameMock) {
+        nameMock = false
+        cache = new hypercache(cb => global.User.find({}, cb), opt)
+        nameMock = true
+      } else {
+        cache = new hypercache(cb => global.User.find({}, cb), opt)
+      }
       cache.testdata = data
       cb(null, cache)
     })
@@ -68,6 +93,16 @@ describe("hypercache", () => {
         cb(err)
       })
     })
+  })
+
+  beforeEach(function () {
+    curTest = this.currentTest.title
+  })
+
+  afterEach(() => {
+    if (cleanUp)
+      cleanUp.map(h => h.destroy())
+    cleanUp = null
   })
 
   describe("method", () => {
@@ -185,6 +220,8 @@ describe("hypercache", () => {
       })
     })
 
+    after(() => clean(cache))
+
     describe("getAll", () => {
       it("should throw index not ready", () => {
         expect(cache.getAll).to.throw(err("Index not ready"))
@@ -253,6 +290,8 @@ describe("hypercache", () => {
       })
     })
 
+    after(() => clean(cache, pcache))
+
     it("should initialize the cache", cb => {
       cache.on("error", cb)
       cache.on("ready", cb)
@@ -261,12 +300,11 @@ describe("hypercache", () => {
     it("should call the child update with the parent cache once", cb => {
       const spy = sinon.spy()
       const data = global.genUser(10)
-      const pcache = new hypercache(cb => cb(null, data), {
-        timeout: 10
-      })
+      const pcache = new hypercache(cb => cb(null, data))
       const cache = new hypercache(spy, {
         sync: pcache
       })
+      clean(pcache, cache)
       pcache.on("update", () => {
         process.nextTick(() => {
           assert.deepEqual(data, spy.getCall(0).args[0])
@@ -281,30 +319,43 @@ describe("hypercache", () => {
       expect(cache.getAll()).to.have.lengthOf(10)
     })
 
-    it("should catch up if a call gets skipped")
-
-    it("should emit error if cb returns error", _cb => {
-      const cache = new hypercache((t, cb) => cb(new Error("Test")), {
-        sync: new hypercache(cb => cb(null, []))
+    it("should catch up if a call gets skipped", cb => {
+      const spy = sinon.spy()
+      const data = global.genUser(10)
+      const pcache = new hypercache(cb => cb(null, data), {
+        timeout: 8,
+        interval: 10
       })
-      let cb = e => {
-        cache.destroy()
-        _cb(e)
-      }
+      const cache = new hypercache(spy, {
+        sync: pcache
+      })
+      clean(pcache, cache)
+      pcache.once("update", () => {
+        setTimeout(() => {
+          assert(spy.firstCall, "first call")
+          spy.getCall(0).args[1](null, data) //unfreeze after time is up
+          assert(spy.secondCall, "second call")
+          cb()
+        }, 15)
+      })
+    })
+
+    it("should emit error if cb returns error", cb => {
+      const pcache = new hypercache(cb => cb(null, []))
+      const cache = new hypercache((t, cb) => cb(new Error("Test")), {
+        sync: pcache
+      })
+      clean(pcache, cache)
       cache.once("error", e => cb(!e ? new Error("empty error") : null))
     })
 
-    it("should re-emit any errors of the parent", _cb => {
+    it("should re-emit any errors of the parent", cb => {
       const pcache = new hypercache(cb => cb(new Error("Test")))
       pcache.once("error", () => {})
       const cache = new hypercache(() => {}, {
         sync: pcache
       })
-      let cb = e => {
-        pcache.destroy()
-        cache.destroy()
-        _cb(e)
-      }
+      clean(pcache, cache)
       cache.once("error", e => cb(!e ? new Error("empty error") : null))
     })
 
@@ -323,17 +374,35 @@ describe("hypercache", () => {
   })
 
   describe("empty values", () => {
+    before(() => nameMock = false)
+
     it("should not throw if opt is empty", cb => createHypercache({}, null, cb))
 
     it("should not throw if opt.keys is empty", cb => createHypercache({}, {
       keys: null
     }, cb))
 
+    it("should throw if fnc is not a function", () => expect(() => new hypercache()).to.throw("no function given"))
+
+    it("should not throw if fnc is not a function but manual is true", () => new hypercache(null, {
+      manual: true
+    }))
+
     it("should assume name unnamed if function is undefined", () => {
       const cache = new hypercache(null, {
         manual: true
       })
       expect(cache.getAll).to.throw('HyperError(index="unnamed"): Index not ready') //name is not public, so only errors contain it
+      clean(cache)
+    })
+
+    it("should assume name unnamed if name contains only spaces", () => {
+      const cache = new hypercache(null, {
+        manual: true,
+        name: "  "
+      })
+      expect(cache.getAll).to.throw('HyperError(index="unnamed"): Index not ready') //name is not public, so only errors contain it
+      clean(cache)
     })
 
     it("should assume name index1 if name is given", () => {
@@ -342,13 +411,10 @@ describe("hypercache", () => {
         name: "index1"
       })
       expect(cache.getAll).to.throw('HyperError(index="index1"): Index not ready') //name is not public, so only errors contain it
+      clean(cache)
     })
 
-    it("should throw if fnc is not a function", () => expect(() => new hypercache()).to.throw("no function given"))
-
-    it("should not throw if fnc is not a function but manual is true", () => new hypercache(null, {
-      manual: true
-    }))
+    after(() => nameMock = true)
   })
 
   describe("events", () => {
@@ -364,6 +430,8 @@ describe("hypercache", () => {
         return cb()
       })
     })
+
+    after(() => clean(cache))
 
     it("should emit ready", cb => {
       cache.once("ready", cb)
@@ -386,6 +454,7 @@ describe("hypercache", () => {
         interval: 1000
       })
       cache.once("error", e => cb(!e ? new Error("empty error") : null))
+      clean(cache)
     })
   })
 })

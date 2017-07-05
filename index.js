@@ -1,7 +1,7 @@
 "use strict"
 
 const debug = require('debug')
-const log = debug('hypercache')
+const _log = debug('hypercache')
 const util = require("util")
 
 function getfncName(fnc) {
@@ -18,6 +18,11 @@ function getfncName(fnc) {
 function HyperCache(fnc, opt) {
 
   const self = this
+  const log = function () {
+    const a = [].slice.call(arguments, 0)
+    a.unshift("hypercache " + name + ":")
+    _log.apply(_log, a)
+  }
   let firstupdate = true
   let ready = false
 
@@ -30,14 +35,20 @@ function HyperCache(fnc, opt) {
   if (!opt.manual && typeof fnc != "function") throw new Error("no function given")
 
   let name = opt.name
-  if (!name) name = fnc && getfncName(fnc) ? getfncName(fnc) : "unnamed"
+  if (!name || !name.trim()) name = fnc && getfncName(fnc) ? getfncName(fnc) : "unnamed"
+  if (!name.trim()) name = "unnamed"
+  name = name.trim().replace(/ /g, "_")
   let qname = JSON.stringify(name)
 
   function err(msg) {
     return new Error("HyperError(index=" + qname + "): " + msg)
   }
 
+  log("initializing")
+
   let intv = 0
+  let syncQueue //last thing that is unsynced
+  let syncSkip = 0
   let callLock = false
   let callTimeout = opt.timeout || opt.interval + 1000 || 3500
 
@@ -52,9 +63,7 @@ function HyperCache(fnc, opt) {
       clearTimeout(tm)
       rcb(_err, res)
     }
-    const tm = setTimeout(() => {
-      if (!cbFired) cb(err("Timeout"))
-    }, callTimeout)
+    const tm = setTimeout(() => cb(err("Timeout")), callTimeout)
     callLock = true
     fnc(b ? a : cb, b ? cb : null)
   }
@@ -77,7 +86,7 @@ function HyperCache(fnc, opt) {
   }
 
   function refresh() {
-    log("refreshing index for hypercache", name)
+    log("refreshing index", cache.length)
     opt.keys.forEach(map => {
       m[map] = {}
       cache.forEach(e => {
@@ -102,11 +111,22 @@ function HyperCache(fnc, opt) {
     })
   }
 
-  function syncLoad() {
-    doCall(opt.sync.getAll(), (err, res) => {
+  function syncLoad(a) {
+    if (callLock) {
+      if (syncQueue) syncSkip++
+        syncQueue = opt.sync.getAll()
+    }
+    doCall(a || opt.sync.getAll(), (err, res) => {
       if (err) self.emit("error", err)
       cache = res
       refresh()
+      if (syncSkip) console.error("Hypercache %s: Skipped %s sync itterations", qname, syncSkip)
+      if (syncQueue) {
+        const q = syncQueue
+        syncQueue = null
+        syncSkip = 0
+        syncLoad(q)
+      }
     })
   }
 
@@ -129,6 +149,7 @@ function HyperCache(fnc, opt) {
 
   function destroy() {
     if (intv) clearInterval(intv)
+    log("destroying")
     self.emit("destroy")
     ready = false
     cache = []
