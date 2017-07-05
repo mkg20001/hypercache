@@ -27,12 +27,34 @@ function HyperCache(fnc, opt) {
   let cache = []
   let m = {}
 
+  if (!opt.manual && typeof fnc != "function") throw new Error("no function given")
+
   let name = opt.name
   if (!name) name = fnc && getfncName(fnc) ? getfncName(fnc) : "unnamed"
   let qname = JSON.stringify(name)
 
   function err(msg) {
     return new Error("HyperError(index=" + qname + "): " + msg)
+  }
+
+  let callLock = false
+  let callTimeout = opt.timeout || opt.interval + 1000 || 3500
+
+  function doCall(a, b) {
+    if (callLock) return
+    let cbFired = false
+    const rcb = b ? b : a
+    let cb = (err, res) => {
+      if (cbFired) throw err("Callback called twice")
+      cbFired = true
+      callLock = false
+      rcb(err, res)
+    }
+    setTimeout(() => {
+      if (!cbFired) cb(err("Timeout"))
+    }, callTimeout)
+    callLock = true
+    fnc(b ? a : cb, b ? cb : null)
   }
 
   function getBy(id, idv) {
@@ -71,7 +93,15 @@ function HyperCache(fnc, opt) {
   }
 
   function load() {
-    fnc((err, res) => {
+    doCall((err, res) => {
+      if (err) self.emit("error", err)
+      cache = res
+      refresh()
+    })
+  }
+
+  function syncLoad() {
+    doCall(opt.sync.getAll(), (err, res) => {
       if (err) self.emit("error", err)
       cache = res
       refresh()
@@ -95,8 +125,14 @@ function HyperCache(fnc, opt) {
     return cache.slice(0)
   }
 
-  if (opt.manual) {
+  if (opt.sync && opt.manual) {
+    throw err("Currently manual+sync is not supported")
+  } else if (opt.manual) {
     this.update = update
+  } else if (opt.sync) {
+    if (!(opt.sync instanceof HyperCache)) throw err("opt.sync is not a hypercache")
+    opt.sync.on("error", e => self.emit.error(e))
+    opt.sync.on("update", syncLoad)
   } else {
     setInterval(load, opt.interval || 2500)
     process.nextTick(load) //fix for events

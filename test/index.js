@@ -134,6 +134,10 @@ describe("hypercache", () => {
     })
   })
 
+  describe("race condition", () => {
+    it("should not call fnc twice if it already is running")
+  })
+
   describe("manual method", () => {
     let cache
     before(cb => {
@@ -189,17 +193,69 @@ describe("hypercache", () => {
     })
   })
 
+  describe("sync", () => {
+    let cache
+    let pcache
+    before(cb => {
+      createHypercache({
+        items: 20
+      }, {
+        keys: ["id", "name"],
+        interval: 100
+      }, (err, _cache) => {
+        if (err) return cb(err)
+        else {
+          pcache = _cache
+          cache = new hypercache((users, cb) => {
+            return cb(null, users.map(u => {
+              return {
+                name: u.name,
+                since: 0
+              }
+            }))
+          }, {
+            keys: ["name", "since"],
+            sync: pcache
+          })
+        }
+      })
+    })
+
+    it("should initialize the cache", cb => {
+      cache.on("error", cb)
+      cache.on("ready", cb)
+    })
+
+    it("should call the child update with the parent cache once")
+
+    it("should throw if both manual and sync are used", () => {
+      expect(() => new hypercache(null, {
+        sync: new hypercache(null, {
+          manual: true
+        }),
+        manual: true
+      })).to.throw(err("Currently manual\\+sync is not supported"))
+    })
+
+    it("should throw if opt.sync is not hypercache", () => expect(() => new hypercache(() => {}, {
+      sync: true
+    })).to.throw(err("opt\\.sync is not a hypercache")))
+  })
+
   describe("empty values", () => {
     it("should not throw if opt is empty", cb => createHypercache({}, null, cb))
+
     it("should not throw if opt.keys is empty", cb => createHypercache({}, {
       keys: null
     }, cb))
+
     it("should assume name unnamed if function is undefined", () => {
       const cache = new hypercache(null, {
         manual: true
       })
       expect(cache.getAll).to.throw('HyperError(index="unnamed"): Index not ready') //name is not public, so only errors contain it
     })
+
     it("should assume name index1 if name is given", () => {
       const cache = new hypercache(null, {
         manual: true,
@@ -207,6 +263,12 @@ describe("hypercache", () => {
       })
       expect(cache.getAll).to.throw('HyperError(index="index1"): Index not ready') //name is not public, so only errors contain it
     })
+
+    it("should throw if fnc is not a function", () => expect(() => new hypercache()).to.throw("no function given"))
+
+    it("should not throw if fnc is not a function but manual is true", () => new hypercache(null, {
+      manual: true
+    }))
   })
 
   describe("events", () => {

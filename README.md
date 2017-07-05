@@ -6,9 +6,9 @@ Hypercache caches async db operations and gives you the abbility to get things b
 
 # Why hypercache?
 
- - ## Fast
- - ## Zero-Dependencies
- - ## 100% Test Coverage
+-   ## Fast
+-   ## Zero-Dependencies
+-   ## 100% Test Coverage
 
 # Usage
 
@@ -24,6 +24,7 @@ Hypercache caches async db operations and gives you the abbility to get things b
     -   `keys`: A list of unique properties like `["id"]`
     -   `interval`: The interval to refresh in ms (default `2500`)
     -   `manual`: This will disable the `fnc` and `interval` and will expose an `update` function that is called as `update(res)`
+    -   `sync`: A hypercache to sync with. This will override the call for fnc to `fnc(opt.sync.getAll(), cb)` and disable the interval.
 
 # Events
 
