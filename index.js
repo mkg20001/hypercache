@@ -28,9 +28,11 @@ function HyperCache(fnc, opt) {
 
   if (!opt) opt = {}
   if (!opt.keys) opt.keys = []
+  if (!opt.sets) opt.sets = []
 
   let cache = []
   let m = {}
+  let s = {}
 
   if (!opt.manual && typeof fnc != "function") throw new Error("no function given")
 
@@ -84,12 +86,33 @@ function HyperCache(fnc, opt) {
     return Object.assign(m[id])
   }
 
+  function getSetMap(id) {
+    if (opt.sets.indexOf(id) == -1) throw err(id + " is not a valid set")
+    if (!ready) throw err("Index not ready")
+    return Object.assign(s[id])
+  }
+
+  function getSet(id, key) {
+    return (getSetMap(id)[key] || []).slice(0)
+  }
+
   function refresh() {
     log("refreshing index", cache.length)
     opt.keys.forEach(map => {
       m[map] = {}
       cache.forEach(e => {
-        m[map][e[map]] = e
+        if (e[map]) m[map][e[map]] = e
+      })
+    })
+
+    opt.sets.forEach(set => {
+      s[set] = {}
+      cache.forEach(e => {
+        let w = Array.isArray(e[set]) ? e[set] : [e[set]]
+        w.forEach(setval => {
+          if (!s[set][setval]) s[set][setval] = []
+          s[set][setval].push(e)
+        })
       })
     })
 
@@ -100,6 +123,8 @@ function HyperCache(fnc, opt) {
     }
 
     self.emit("update")
+
+    log("refreshed")
   }
 
   function load() {
@@ -141,6 +166,15 @@ function HyperCache(fnc, opt) {
     return opt.keys.map(map => getBy(map, val)).filter(e => !!e)
   }
 
+  function flatten(a, b) {
+    return a.concat(b)
+  }
+
+  function searchSets(val) {
+    val = val.toString()
+    return opt.sets.map(set => getSet(set, val)).filter(e => !!e && !!e.length).reduce(flatten, [])
+  }
+
   function getAll() {
     if (!ready) throw err("Index not ready")
     return cache.slice(0)
@@ -169,8 +203,11 @@ function HyperCache(fnc, opt) {
 
   this.getAll = getAll
   this.getMap = getMap
+  this.getSetMap = getSetMap
+  this.getSet = getSet
   this.getBy = getBy
   this.search = search
+  this.searchSets = searchSets
   this.destroy = destroy
 }
 

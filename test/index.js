@@ -112,7 +112,8 @@ describe("hypercache", () => {
         items: 100
       }, {
         interval: 1000,
-        keys: ["id", "name"]
+        keys: ["id", "name"],
+        sets: ["count"]
       }, (err, _cache) => {
         if (err) return cb(err)
         else {
@@ -135,6 +136,40 @@ describe("hypercache", () => {
 
       it("should throw for invalid map", () => {
         expect(cache.getMap).to.throw(err("undefined is not a valid key"))
+      })
+    })
+
+    describe("getSetMap", () => {
+      it("should return a set map for count with 5 sets (1,2,3,4,5) each 20 items", () => {
+        const map = cache.getSetMap("count")
+        assert(map, "no map returned")
+        Object.keys(map).should.have.lengthOf(5);
+        ["1", "2", "3", "4", "5"].forEach(i => {
+          map[i].should.have.lengthOf(20)
+        })
+
+        it("should throw for invalid map", () => {
+          expect(cache.getSetMap).to.throw(err("undefined is not a valid set"))
+        })
+      })
+    })
+
+    describe("getSet", () => {
+      ["1", "2", "3", "4", "5"].forEach(i => {
+        it("should return a set for count, " + i + " with 20 items", () => {
+          const res = cache.getSet("count", i)
+          assert(res, "no set returned")
+          res.should.have.lengthOf(20)
+        })
+      })
+
+      it("should throw for invalid map", () => {
+        expect(cache.getSetMap).to.throw(err("undefined is not a valid set"))
+      })
+
+      it("should return empty array for missing set key", () => {
+        const res = cache.getSet("count", null)
+        assert(Array.isArray(res), "res is not an array")
       })
     })
 
@@ -167,6 +202,71 @@ describe("hypercache", () => {
         o.id.should.equal(l.id)
       })
     })
+
+    describe("searchSets", () => {
+      it("should find 20 objects for value 1", () => {
+        const l = cache.testdata[0] //what we are looking for
+        const o_ = cache.searchSets("1") //what we got
+        o_.should.have.lengthOf(20)
+        const o = o_[0]
+        assert(o, "no object found")
+        assert.equal(typeof o, "object", "wrong type")
+        o.id.should.equal(l.id)
+      })
+    })
+
+    after(() => clean(cache))
+  })
+
+  describe("sets stuff", () => {
+    let cache
+    before(() => {
+      nameMock = false
+      cache = new hypercache(null, {
+        manual: true,
+        sets: ["alias"]
+      })
+      nameMock = true
+      cache.testdata = []
+      for (var i = 1; i < 6; i++) {
+        cache.testdata.push({
+          name: "user" + i,
+          alias: [
+            "u" + i,
+            "user" + i,
+            "human"
+          ]
+        })
+      }
+      cache.update(cache.testdata)
+      console.log(cache.testdata)
+    })
+
+    for (let i = 1; i < 5; i++) {
+      ["user", "u"].forEach(a => {
+        it("should find user" + i + " for alias " + a + i, () => {
+          const l = cache.testdata[i - 1] //what we are looking for
+          const o_ = cache.searchSets(a + i) //what we got
+          o_.should.have.lengthOf(1)
+          const o = o_[0]
+          assert(o, "no object found")
+          assert.equal(typeof o, "object", "wrong type")
+          o.name.should.equal(l.name)
+        })
+      })
+    }
+
+    it("should find 5 users for alias human", () => {
+      const l = cache.testdata[0] //what we are looking for
+      const o_ = cache.searchSets("human") //what we got
+      o_.should.have.lengthOf(5)
+      const o = o_[0]
+      assert(o, "no object found")
+      assert.equal(typeof o, "object", "wrong type")
+      o.name.should.equal(l.name)
+    })
+
+    after(() => clean(cache))
   })
 
   describe("race condition", () => {
@@ -211,7 +311,8 @@ describe("hypercache", () => {
         items: 10
       }, {
         manual: true,
-        keys: ["id", "name"]
+        keys: ["id", "name"],
+        sets: ["count"]
       }, (err, _cache) => {
         if (err) return cb(err)
         else {
@@ -235,15 +336,33 @@ describe("hypercache", () => {
       })
     })
 
-    describe("getMap", () => {
+    describe("getBy", () => {
       it("should throw index not ready", () => {
         expect(() => cache.getBy("id", cache.testdata[0].id)).to.throw(err("Index not ready"))
+      })
+    })
+
+    describe("getSetMap", () => {
+      it("should throw index not ready", () => {
+        expect(() => cache.getSetMap("count")).to.throw(err("Index not ready"))
+      })
+    })
+
+    describe("getSet", () => {
+      it("should throw index not ready", () => {
+        expect(() => cache.getSet("count", "1")).to.throw(err("Index not ready"))
       })
     })
 
     describe("search", () => {
       it("should throw index not ready", () => {
         expect(() => cache.search(cache.testdata[0].id)).to.throw(err("Index not ready"))
+      })
+    })
+
+    describe("searchSets", () => {
+      it("should throw index not ready", () => {
+        expect(() => cache.searchSets("1")).to.throw(err("Index not ready"))
       })
     })
 
@@ -276,7 +395,7 @@ describe("hypercache", () => {
           pcache = _cache
           cache = new hypercache((users, cb) => {
             let f = false
-            return cb(null, users.filter(u => f = !f).map(u => {
+            return cb(null, users.filter(() => f = !f).map(u => {
               return {
                 name: u.name,
                 since: 0
@@ -290,8 +409,6 @@ describe("hypercache", () => {
         }
       })
     })
-
-    after(() => clean(cache, pcache))
 
     it("should initialize the cache", cb => {
       cache.on("error", cb)
@@ -400,6 +517,8 @@ describe("hypercache", () => {
     it("should throw if opt.sync is not hypercache", () => expect(() => new hypercache(() => {}, {
       sync: true
     })).to.throw(err("opt\\.sync is not a hypercache")))
+
+    after(() => clean(cache, pcache))
   })
 
   describe("empty values", () => {
