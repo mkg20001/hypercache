@@ -239,7 +239,6 @@ describe("hypercache", () => {
         })
       }
       cache.update(cache.testdata)
-      console.log(cache.testdata)
     })
 
     for (let i = 1; i < 5; i++) {
