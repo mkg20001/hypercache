@@ -1,5 +1,7 @@
 # Hypercache [![Build Status](https://travis-ci.org/mkg20001/hypercache.svg?branch=master)](https://travis-ci.org/mkg20001/hypercache) [![codecov](https://codecov.io/gh/mkg20001/hypercache/branch/master/graph/badge.svg)](https://codecov.io/gh/mkg20001/hypercache)
 
+[![Greenkeeper badge](https://badges.greenkeeper.io/mkg20001/hypercache.svg)](https://greenkeeper.io/)
+
 Simple but powerful caching.
 
 Hypercache caches async db operations and gives you the abbility to get things by id or search the database completly sync and with speeds otherwise impossible.

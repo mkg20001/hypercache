@@ -26,7 +26,7 @@
     "mongodb-prebuilt": "github:mkg20001/mongodb-prebuilt#quickfix-1",
     "mongoose": "^4.11.1",
     "nyc": "^11.0.3",
-    "sinon": "^2.3.7",
+    "sinon": "^3.2.1",
     "sinon-chai": "^2.11.0"
   },
   "dependencies": {},
