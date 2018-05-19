@@ -21,7 +21,7 @@
     "chai": "^4.0.2",
     "colors": "^1.1.2",
     "gene-rator": "0.0.1-pre",
-    "mocha": "^4.0.0",
+    "mocha": "^5.2.0",
     "mockgoose": "github:Mockgoose/Mockgoose",
     "mongodb-prebuilt": "github:mkg20001/mongodb-prebuilt#quickfix-1",
     "mongoose": "^5.0.0",
